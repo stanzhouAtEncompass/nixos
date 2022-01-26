@@ -167,7 +167,8 @@ in
      unrar unzip
      # other
      redshift python2Full python38 jq
-     xorg.xrdb playerctl tree
+     xorg.xrdb playerctl tree stow oh-my-zsh
+     awscli2 jump starship
      # gvolpe
      bat docker-compose docker ncdu
      exa prettyping fish
