@@ -25,9 +25,33 @@ in
     ];
 
   # Use the systemd-boot EFI boot loader.
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
-
+  boot.loader = {
+    #systemd-boot.enable = true;
+    efi = {
+      canTouchEfiVariables = true;
+      efiSysMountPoint = "/boot";
+    };
+    grub = {
+      devices = [ "nodev" ];
+      efiSupport = true;
+      enable = true;
+      extraEntries = ''
+        menuentry "Hackintosh BOOTx64" {
+          insmod part_gpt
+          insmod fat
+          insmod search_fs_uuid
+          insmod chain
+          search --fs-uuid --set=root 0AAD-D8F2
+          chainloader /EFI/BOOT/BOOTx64.efi
+        }
+      '';
+      version = 2;
+      #useOSProber = true;
+    };
+  };
+  #boot.loader.systemd-boot.enable = true;
+  #boot.loader.efi.canTouchEfiVariables = true;
+  boot.kernel.sysctl."net.ipv6.conf.enp6s0.disable_ipv6" = true;
   networking.hostName = "nixos"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
@@ -221,7 +245,8 @@ in
   # };
 
   # List services that you want to enable:
-
+  # browsing samba shares with GVFS
+  services.gvfs.enable = true;
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
 
@@ -246,7 +271,7 @@ in
   # networking.firewall.allowedTCPPorts = [ ... ];
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
-  # networking.firewall.enable = false;
+  networking.firewall.enable = false;
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
