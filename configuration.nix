@@ -9,6 +9,14 @@ let
   my-python-packages = python-packages: with python-packages; [
     pandas
     requests
+    beautifulsoup4
+    lxml
+    pycairo
+    pygobject3
+    configobj
+    setuptools
+    httplib2
+    pillow
     # other python packages you want
   ]; 
   python-with-my-packages = python3.withPackages my-python-packages;
@@ -22,6 +30,7 @@ in
       ./samba.nix
       ./redshift.nix
       ./hidpi.nix
+      #./pkgs/pm.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
@@ -104,6 +113,9 @@ in
 #     default = "xmonad";
   };
 
+  # Add local overlays
+  #nixpkgs.overlays = [ (import ./overlays) ];
+
   # Configure keymap in X11
   services.xserver.layout = "us";
   # services.xserver.xkbOptions = "eurosign:e";
@@ -119,6 +131,10 @@ in
   services.xserver.videoDrivers = [ "nvidia" ];
   hardware.opengl.driSupport32Bit = true;
   hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.legacy_390;
+
+  # Enable geenclip.
+  services.greenclip.enable = true;
+  services.greenclip.package = pkgs.haskellPackages.greenclip;
 
   # virtualbox
   virtualisation.virtualbox.host.enable = true;
@@ -136,7 +152,7 @@ in
   # Define a user account. Don't forget to set a password with ‘passwd’.
    users.users.szhou = {
      isNormalUser = true;
-     extraGroups = [ "wheel" "video" "audio" "disk" "networkmanager" ]; # Enable ‘sudo’ for the user.
+     extraGroups = [ "wheel" "video" "audio" "disk" "docker" "networkmanager" ]; # Enable ‘sudo’ for the user.
    };
   
    security.sudo.wheelNeedsPassword = false;
@@ -156,8 +172,10 @@ in
      emacs vim neovim
      xmobar
      nitrogen
+     # pdf reader
+     evince
      # xmonad staff
-     dmenu  conky  picom trayer
+     dmenu  conky  picom trayer rofi 
      feh 
      haskellPackages.libmpd
      haskellPackages.xmobar
@@ -167,7 +185,8 @@ in
      xscreensaver synergy 
      variety volumeicon unclutter pywal
      xfce.xfce4-power-manager
-     xfce.xfce4-notifyd flameshot
+     xfce.xfce4-notifyd 
+     xfce.xfce4-clipman-plugin
      nm-tray xsettingsd pasystray
      arandr gmrun redshift
      compton  nitrogen betterlockscreen 
@@ -176,28 +195,38 @@ in
      # chat tool
      slack discord
      # screenshot tool
-     scrot
+     scrot flameshot imgur-screenshot
      # media player
      vlc mplayer
      #clipboard tools
      clipit clipman xclip
+     haskellPackages.greenclip
      # office
      libreoffice
      # shell
-     zsh oh-my-zsh
+     zsh oh-my-zsh fzf 
      # admin
      htop tmux bind dig
      # zip tool
      unrar unzip
      # other
      redshift python2Full python38 jq
-     xorg.xrdb playerctl tree stow oh-my-zsh
+     xorg.xrdb playerctl tree stow 
      awscli2 jump starship
+     ssm-session-manager-plugin
      # gvolpe
      bat docker-compose docker ncdu
      exa prettyping fish
      # rss
-     newsboat
+     newsboat uget gnupg gnome.pomodoro
+     # pass
+     pass pass-nodmenu rofi-pass
+     # own package
+     #pkgs.pm
+     # provides a default authentification client for policykit
+     lxqt.lxqt-policykit
+     # network tools
+     nmap mtr nethogs
    ];
 
    # for redshift
@@ -222,6 +251,10 @@ in
     enable = true;
     shellAliases = {
       vim = "nvim";
+      h = "history";
+      k = "kubectl";
+      pdf = "evince";
+      s = "kitty +kitten ssh";
     };
     enableCompletion = true;
     autosuggestions.enable = true;
@@ -232,8 +265,21 @@ in
       export ZSH_THEME="robbyrussell"
       plugins=(git)
       source $ZSH/oh-my-zsh.sh
+      bindkey \^U backward-kill-line
     '';
     promptInit = "";
+    oh-my-zsh = {
+    enable = true;
+    plugins = [ "aws" "fzf" ];
+    };
+  };
+
+  programs.gnupg = {
+      agent = {
+        enable = true;
+        enableExtraSocket = true;
+        pinentryFlavor = "curses";
+      };
   };
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -246,7 +292,11 @@ in
 
   # List services that you want to enable:
   # browsing samba shares with GVFS
-  services.gvfs.enable = true;
+  services.gvfs = {
+    enable = true;
+    package = lib.mkForce pkgs.gnome3.gvfs;
+  };
+
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
 
@@ -255,8 +305,11 @@ in
     fontDir.enable = true;
     enableGhostscriptFonts = true;
     fonts = with pkgs; [
+      inter
       font-awesome
       font-awesome_4
+      fira-code
+      (nerdfonts.override { fonts = [ "FiraCode" ]; })
       open-sans
       noto-fonts
       noto-fonts-cjk
